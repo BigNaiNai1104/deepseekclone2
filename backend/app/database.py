@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
+import logging
 
 # 加载 .env 文件
 load_dotenv()
@@ -34,11 +35,15 @@ def get_db():
     finally:
         db.close()
 
+# 配置日志
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 # 调试：确认数据库连接
 @app.on_event("startup")
 async def startup_db():
     try:
         with engine.connect() as connection:
-            print("Database connected successfully!")
+            logger.info("Database connected successfully!")
     except Exception as e:
-        print(f"Database connection failed: {e}")
+        logger.error(f"Database connection failed: {e}")

@@ -15,3 +15,11 @@ class UserCreate(BaseModel):
 
     class Config:
         orm_mode = True
+
+# 响应模式：用于用户登录/注册后的响应
+class UserResponse(BaseModel):
+    id: int
+    username: str
+
+    class Config:
+        orm_mode = True

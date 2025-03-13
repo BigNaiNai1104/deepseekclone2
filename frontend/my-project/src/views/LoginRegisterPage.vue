@@ -41,7 +41,7 @@ export default {
   methods: {
     async login() {
       try {
-        const response = await axios.post('http://localhost:8000/users/login', this.form);
+        const response = await axios.post('http://localhost:8000/api/login', this.form);
         localStorage.setItem('token', response.data.access_token);  // 保存JWT Token
         this.$router.push('/chat');  // 登录成功后跳转到聊天界面
       } catch (error) {
@@ -51,7 +51,7 @@ export default {
 
     async register() {
       try {
-        await axios.post('http://localhost:8000/users/register', this.form);
+        await axios.post('http://localhost:8000/api/register', this.form);
         this.$message.success('注册成功，请登录');
         this.activeTab = 'login';  // 注册成功后自动切换到登录界面
       } catch (error) {
@@ -66,7 +66,3 @@ export default {
   }
 };
 </script>
-
-<style scoped>
-/* 可以根据需要调整样式 */
-</style>
