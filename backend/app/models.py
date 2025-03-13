@@ -21,6 +21,7 @@ class User(Base):
     def verify_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.password.encode('utf-8'))
 
+
 # 示例模型：聊天历史记录
 class ChatHistory(Base):
     __tablename__ = "chat_history"
