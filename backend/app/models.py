@@ -1,35 +1,44 @@
-from sqlalchemy import Column, Integer, String, DateTime
+# --------------- app/models.py ---------------
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from .database import Base
-from datetime import datetime
 import bcrypt
+import uuid
+from datetime import datetime
 
-# 用户模型
 class User(Base):
     __tablename__ = "users"
-
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    password = Column(String)
-
-    # 用户与聊天记录的关系
-    chat_history = relationship("ChatHistory", back_populates="owner")
+    username = Column(String(50), unique=True, index=True)
+    password = Column(String(60))
+    is_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    sessions = relationship("ChatSession", back_populates="owner")
 
     def set_password(self, password: str):
-        self.password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+        self.password = hashed.hex()
 
     def verify_password(self, password: str) -> bool:
-        return bcrypt.checkpw(password.encode('utf-8'), self.password.encode('utf-8'))
+        try:
+            stored_hash = bytes.fromhex(self.password)
+            return bcrypt.checkpw(password.encode(), stored_hash)
+        except ValueError:
+            return False
 
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    owner = relationship("User", back_populates="sessions")
+    messages = relationship("ChatMessage", back_populates="session")
 
-# 示例模型：聊天历史记录
-class ChatHistory(Base):
-    __tablename__ = "chat_history"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
-    message = Column(String)
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    id = Column(Integer, primary_key=True)
+    session_id = Column(String(36), ForeignKey("chat_sessions.id"))
+    role = Column(String(20))  # system/user/assistant
+    content = Column(Text)
     timestamp = Column(DateTime, default=datetime.utcnow)
-
-    # 设置与 User 模型的关系
-    owner = relationship("User", back_populates="chat_history")
+    session = relationship("ChatSession", back_populates="messages")
