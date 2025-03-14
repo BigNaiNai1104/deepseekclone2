@@ -1,9 +1,9 @@
-# --------------- app/crud.py ---------------
 from sqlalchemy.orm import Session
 from . import models, schemas
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
+from fastapi.security import OAuth2PasswordBearer
 
 # 密码加密工具
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -12,6 +12,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# OAuth2密码认证的Bearer Token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
 
 # 验证用户并生成JWT
 def verify_user(db: Session, user: schemas.UserLogin):
