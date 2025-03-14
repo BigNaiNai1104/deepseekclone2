@@ -1,6 +1,6 @@
+# --------------- app/crud.py ---------------
 from sqlalchemy.orm import Session
 from . import models, schemas
-from fastapi import HTTPException
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
@@ -16,7 +16,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # 验证用户并生成JWT
 def verify_user(db: Session, user: schemas.UserLogin):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
-    if db_user and pwd_context.verify(user.password, db_user.password):
+    if db_user and pwd_context.verify(user.password, db_user.password_hash):  # 修改为 password_hash
         # 生成 JWT Token
         access_token = create_access_token(data={"sub": db_user.username})
         return access_token
@@ -26,7 +26,7 @@ def verify_user(db: Session, user: schemas.UserLogin):
 def create_user(db: Session, user: schemas.UserCreate):
     # 密码加密
     hashed_password = pwd_context.hash(user.password)
-    db_user = models.User(username=user.username, password=hashed_password)
+    db_user = models.User(username=user.username, password_hash=hashed_password)  # 使用 password_hash
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

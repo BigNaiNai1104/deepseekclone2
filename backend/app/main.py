@@ -1,54 +1,47 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from . import schemas, crud
-from .database import get_db
-from .services.chat_service import ChatService
-import time
+from . import crud, models, schemas
+from .database import SessionLocal, engine
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
+models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="DeepSeek API")
+app = FastAPI()
 
-# CORS配置
+# 安全优化的CORS配置
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],  # 开发环境允许所有源
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=[       # 明确允许的请求头
+        "Authorization",  # JWT令牌头
+        "Content-Type"    # 内容类型头
+    ]
 )
 
-# 依赖项
-async def get_current_user(
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
-):
-    return crud.get_current_user(db, token)
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to DeepSeek Clone API"}
 
-async def require_admin(user = Depends(get_current_user)):
-    crud.require_admin(user)
-    return user
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-# 路由
-@app.post("/api/register")
-async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    return crud.create_user(db, user)
+@app.post("/api/register", response_model=schemas.UserCreate)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    try:
+        db_user = crud.create_user(db=db, user=user)
+        return db_user
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Error during registration: " + str(e))
 
 @app.post("/api/login")
-async def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    return crud.authenticate_user(db, user)
-
-@app.post("/api/chat")
-async def chat_endpoint(
-    request: schemas.ChatRequest,
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    service = ChatService(db)
-    return service.process_message(user.id, request.message, request.session_id)
-
-@app.get("/health")
-async def health_check():
-    return {"status": "ok", "timestamp": int(time.time())}
+def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    access_token = crud.verify_user(db=db, user=user)
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    return {"access_token": access_token, "token_type": "bearer"}

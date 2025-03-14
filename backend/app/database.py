@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:021104@localhost/deepseek2"
+
+# 创建引擎
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     pool_pre_ping=True,
@@ -14,9 +16,13 @@ engine = create_engine(
     max_overflow=10
 )
 
+# 创建数据库会话
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# 创建 Base 类
 Base = declarative_base()
 
+# 获取数据库会话
 def get_db():
     db = SessionLocal()
     try:
