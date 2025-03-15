@@ -1,21 +1,19 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from app.database import SessionLocal, engine, get_db
-from app import models, crud, schemas
-import os
+from pydantic import BaseModel
+from .database import SessionLocal, get_db
+from . import models, crud, schemas
 
-# 初始化数据库表
-models.Base.metadata.create_all(bind=engine)
-
-# 创建 FastAPI 实例
 app = FastAPI()
 
-# 配置 CORS 跨域
+# 配置 CORS
 origins = [
     "http://localhost",
-    "http://localhost:8000",  # 修改为新的端口号
-    "http://127.0.0.1:8000",  # 修改为新的端口号
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",  # 允许 Vite 开发服务器
+    "http://127.0.0.1:5173",
 ]
 
 app.add_middleware(
@@ -26,55 +24,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # 根路由
 @app.get("/")
 def read_root():
     return {"message": "Welcome to DeepSeek Clone API"}
 
-
-# 用户注册 API
-@app.post("/api/register", response_model=schemas.UserCreate)
+# 用户注册
+@app.post("/api/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    try:
-        # 检查用户是否已存在
-        db_user = crud.get_user_by_username(db, username=user.username)
-        if db_user:
-            raise HTTPException(status_code=400, detail="Username already registered")
+    return crud.create_user(db=db, user=user)
 
-        # 创建用户
-        db_user = crud.create_user(db=db, user=user)
-        return db_user
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error during registration: {str(e)}")
-
-
-# 用户登录 API
+# 用户登录
 @app.post("/api/login")
 def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    # 验证用户
     access_token = crud.verify_user(db=db, user=user)
     if not access_token:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-
-    # 返回访问令牌
     return {"access_token": access_token, "token_type": "bearer"}
-
 
 # 获取当前用户信息
 @app.get("/api/me", response_model=schemas.User)
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(crud.oauth2_scheme)):
-    # 验证令牌并获取用户信息
     user = crud.get_current_user(db, token)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
 
+# 定义聊天请求和响应模型
+class ChatRequest(BaseModel):
+    message: str
+    session_id: str | None = None
 
-# 数据库会话管理
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+class ChatResponse(BaseModel):
+    reply: str
+    session_id: str
+
+# 添加聊天路由
+@app.post("/api/chat")
+async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
+    # 模拟回复逻辑
+    return {
+        "reply": f"已收到你的消息：'{request.message}'（这是模拟回复）",
+        "session_id": request.session_id or "new-session-id"
+    }
