@@ -50,6 +50,25 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(crud.oa
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
 
+# 修改用户设置
+@app.post("/api/settings")
+def update_settings(
+    request: schemas.SettingsRequest,
+    db: Session = Depends(get_db),
+    token: str = Depends(crud.oauth2_scheme)
+):
+    current_user = crud.get_current_user(db, token)
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    if request.username:
+        current_user.username = request.username
+    if request.password:
+        current_user.password_hash = crud.get_password_hash(request.password)
+
+    db.commit()
+    return {"message": "设置更新成功"}
+
 # 管理员专属功能：获取所有用户
 @app.get("/api/admin/users", response_model=list[schemas.User])
 def get_all_users(db: Session = Depends(get_db), token: str = Depends(crud.oauth2_scheme)):

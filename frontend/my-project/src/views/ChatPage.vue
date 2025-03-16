@@ -2,7 +2,6 @@
   <div class="app-container">
     <!-- 侧边栏 -->
     <div class="sidebar">
-      <!-- 添加标题 -->
       <div class="sidebar-title">
         <h1>DeepseekClone</h1>
       </div>
@@ -10,7 +9,6 @@
         <h2>对话历史</h2>
       </div>
       <div class="chat-list">
-        <!-- 遍历历史记录 -->
         <div
           v-for="chat in chatHistory"
           :key="chat.id"
@@ -25,13 +23,20 @@
         <button class="button-text" @click="newChat">开启新对话</button>
         <button class="button-text" @click="openSettings">设置</button>
         <button class="button-text" @click="logout">退出</button>
+        <!-- 管理员按钮 -->
+        <button
+          v-if="isAdmin"
+          class="button-text"
+          @click="goToAdminPage"
+        >
+          管理员
+        </button>
       </div>
     </div>
 
     <!-- 主内容区域 -->
     <div class="main-content">
       <div class="messages">
-        <!-- 显示当前对话的消息 -->
         <div v-for="(msg, index) in messages" :key="index" class="message">
           <div class="avatar">{{ msg.sender === 'user' ? '👤' : '🤖' }}</div>
           <div class="bubble">
@@ -57,81 +62,82 @@ export default {
   name: 'ChatPage',
   data() {
     return {
-      message: '', // 用于绑定输入框的内容
+      message: '', // 用户输入的消息
       messages: [], // 当前对话的消息列表
-      chatHistory: [], // 历史记录（所有对话）
+      chatHistory: [], // 对话历史
       activeChatId: null, // 当前选中的对话 ID
-      chatCounter: 1 // 用于生成对话标题的计数器
+      isAdmin: false, // 是否是管理员
     };
   },
   methods: {
-    // 开启新对话
-    newChat() {
-      // 创建一个新的对话对象
-      const newChat = {
-        id: Date.now(), // 使用时间戳作为唯一 ID
-        title: `对话${this.chatCounter}`, // 格式化标题为“对话1”、“对话2”等
-        messages: [] // 初始化为空的消息列表
-      };
+    async checkAdminStatus() {
+      // 调用后端接口检查用户是否是管理员
+      try {
+        const token = localStorage.getItem('token'); // 从本地存储获取 Token
+        if (!token) {
+          console.error('未找到 Token');
+          this.logout(); // 如果未找到 Token，跳转到登录页面
+          return;
+        }
 
-      // 将新对话添加到历史记录中
-      this.chatHistory.push(newChat);
+        const response = await fetch('http://localhost:8000/api/me', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`, // 携带 Token
+          },
+        });
 
-      // 更新对话计数器
-      this.chatCounter++;
+        if (!response.ok) {
+          // 如果返回 401 或其他错误状态码
+          if (response.status === 401) {
+            this.logout(); // Token 无效，跳转到登录页面
+          }
+          throw new Error(`HTTP 错误! 状态码: ${response.status}`);
+        }
 
-      // 切换到新对话
-      this.switchChat(newChat);
-
-      // 提示用户新对话已创建
-      alert('已开启新对话');
-    },
-
-    // 切换对话
-    switchChat(chat) {
-      // 设置当前选中的对话 ID
-      this.activeChatId = chat.id;
-
-      // 将当前对话的消息设置为选中对话的消息
-      this.messages = chat.messages;
-    },
-
-    // 发送消息
-    sendMessage() {
-      if (this.message.trim() === '') return; // 如果输入框为空，则不发送
-
-      // 将用户输入的消息添加到当前对话的消息列表中
-      const activeChat = this.chatHistory.find(chat => chat.id === this.activeChatId);
-      if (activeChat) {
-        activeChat.messages.push({ text: this.message, sender: 'user' });
+        const user = await response.json();
+        this.isAdmin = user.is_admin; // 假设后端返回的用户信息中包含 is_admin 字段
+      } catch (error) {
+        console.error('检查管理员状态失败', error);
       }
-
-      // 清空输入框
-      this.message = '';
-
-      // 这里可以添加发送消息到后端的逻辑
-      // 例如：this.sendToBackend(this.message);
     },
-
-    // 打开设置
+    goToAdminPage() {
+      this.$router.push('/admin'); // 跳转到管理员页面
+    },
+    newChat() {
+      // 开启新对话的逻辑
+      this.messages = [];
+      this.chatHistory.push({
+        id: Date.now(),
+        title: `对话${this.chatHistory.length + 1}`,
+        messages: [],
+      });
+      this.activeChatId = this.chatHistory[this.chatHistory.length - 1].id;
+    },
     openSettings() {
-      alert('打开设置');
-      // 在这里实现打开设置的逻辑
+      this.$router.push('/settings'); // 跳转到设置页面
     },
-
-    // 退出登录
     logout() {
-      // 清除登录状态（例如清除 token）
-      localStorage.removeItem('auth_token'); // 假设 token 存储在 localStorage 中
-
-      // 跳转到登录注册界面
-      this.$router.push('/login'); // 假设登录注册界面的路由是 '/login'
-    }
+      // 退出登录的逻辑
+      localStorage.removeItem('token');
+      this.$router.push('/login');
+    },
+    sendMessage() {
+      // 发送消息的逻辑
+      if (this.message.trim()) {
+        this.messages.push({ text: this.message, sender: 'user' });
+        this.message = '';
+      }
+    },
+    switchChat(chat) {
+      // 切换对话的逻辑
+      this.activeChatId = chat.id; // 设置当前选中的对话 ID
+      this.messages = chat.messages || []; // 加载该对话的消息
+    },
   },
   mounted() {
-    // 初始化一个默认对话（可选）
-    this.newChat();
-  }
+    this.checkAdminStatus(); // 组件加载时检查管理员状态
+  },
 };
 </script>
 

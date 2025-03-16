@@ -36,12 +36,12 @@ export default {
 
         if (response.ok) {
           const data = await response.json();
-          localStorage.setItem('token', data.token); // 存储 token
+          localStorage.setItem('token', data.access_token); // 存储 token
           alert('登录成功！');
           this.$router.push('/chat'); // 跳转到聊天页面
         } else {
           const errorData = await response.json();
-          this.error = errorData.message || '登录失败，请检查用户名和密码';
+          this.error = errorData.detail || '登录失败，请检查用户名和密码';
         }
       } catch (error) {
         this.error = '网络错误，请稍后重试';

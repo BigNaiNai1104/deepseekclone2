@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from datetime import datetime
 
 # 用户注册请求模型
 class UserCreate(BaseModel):
@@ -30,3 +29,13 @@ class ChatResponse(BaseModel):
     reply: str
     session_id: str
     history: list
+
+# 修改密码请求模型
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+# 用户设置请求模型
+class SettingsRequest(BaseModel):
+    username: str | None = None
+    password: str | None = None
