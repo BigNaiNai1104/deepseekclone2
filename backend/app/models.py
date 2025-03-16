@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import bcrypt
@@ -10,6 +10,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True)
     password_hash = Column(String(128))  # 存储为十六进制字符串
+    is_admin = Column(Boolean, default=False)  # 是否为管理员
     created_at = Column(DateTime, default=datetime.utcnow)
     sessions = relationship("ChatSession", back_populates="owner")
 

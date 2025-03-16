@@ -50,18 +50,25 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(crud.oa
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
 
-# 定义聊天请求和响应模型
-class ChatRequest(BaseModel):
-    message: str
-    session_id: str | None = None
+# 管理员专属功能：获取所有用户
+@app.get("/api/admin/users", response_model=list[schemas.User])
+def get_all_users(db: Session = Depends(get_db), token: str = Depends(crud.oauth2_scheme)):
+    current_user = crud.get_current_user(db, token)
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    return crud.get_all_users(db)
 
-class ChatResponse(BaseModel):
-    reply: str
-    session_id: str
+# 管理员专属功能：提升用户为管理员
+@app.post("/api/admin/promote")
+def promote_user(username: str, db: Session = Depends(get_db), token: str = Depends(crud.oauth2_scheme)):
+    current_user = crud.get_current_user(db, token)
+    if not current_user or not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    return crud.promote_to_admin(db, username)
 
-# 添加聊天路由
+# 聊天功能
 @app.post("/api/chat")
-async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
+async def chat_endpoint(request: schemas.ChatRequest, db: Session = Depends(get_db)):
     # 模拟回复逻辑
     return {
         "reply": f"已收到你的消息：'{request.message}'（这是模拟回复）",

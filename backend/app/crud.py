@@ -64,3 +64,29 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def get_current_user(db: Session, token: str):
+    """获取当前用户"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if username is None:
+            return None
+        user = db.query(models.User).filter(models.User.username == username).first()
+        return user
+    except jwt.PyJWTError:
+        return None
+
+def get_all_users(db: Session):
+    """获取所有用户"""
+    return db.query(models.User).all()
+
+def promote_to_admin(db: Session, username: str):
+    """将用户提升为管理员"""
+    db_user = db.query(models.User).filter(models.User.username == username).first()
+    if not db_user:
+        return None
+    db_user.is_admin = True
+    db.commit()
+    db.refresh(db_user)
+    return db_user

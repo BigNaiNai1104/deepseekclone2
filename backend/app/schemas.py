@@ -15,6 +15,7 @@ class UserLogin(BaseModel):
 class User(BaseModel):
     id: int
     username: str
+    is_admin: bool
 
     class Config:
         from_attributes = True  # 允许从 ORM 模型转换为 Pydantic 模型
