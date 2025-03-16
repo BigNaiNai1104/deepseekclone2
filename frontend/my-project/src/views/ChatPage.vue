@@ -80,7 +80,7 @@ export default {
           return;
         }
 
-        const response = await fetch('http://localhost:8000/api/me', {
+        const response = await fetch('/api/me', {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`, // 携带 Token

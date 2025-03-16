@@ -63,7 +63,7 @@ export default {
         }
 
         const response = await axios.post(
-          'http://localhost:8000/api/change-password',
+          '/api/change-password',
           {
             old_password: this.passwordForm.oldPassword,
             new_password: this.passwordForm.newPassword,
