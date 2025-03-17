@@ -1,25 +1,35 @@
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
+from fastapi.security import OAuth2PasswordBearer
 from fastapi import HTTPException, status
-import os
+from . import schemas
 
-SECRET_KEY = os.getenv("JWT_SECRET", "")
+# JWT 配置
+SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+# OAuth2 密码模式
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def verify_token(token: str):
+# 创建访问令牌
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+# 验证令牌
+def verify_token(token: str, credentials_exception):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-            headers={"WWW-Authenticate": "Bearer"}
-        )
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        return schemas.TokenData(username=username)
+    except JWTError:
+        raise credentials_exception

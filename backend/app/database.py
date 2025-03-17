@@ -2,35 +2,35 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import QueuePool
-import os
-from dotenv import load_dotenv
+import logging
 
-load_dotenv()
-
-# 数据库连接 URL
+# 保留你的 MySQL 连接 URL
 SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:021104@localhost/deepseek2"
 
-# 创建引擎
+# 配置日志记录（可选，用于调试）
+logging.basicConfig()
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+
+# 创建数据库引擎（添加连接池配置）
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=20,
-    max_overflow=10
+    poolclass=QueuePool,  # 使用连接池
+    pool_size=5,          # 连接池大小
+    max_overflow=10,      # 最大溢出连接数
+    pool_timeout=30,      # 连接超时时间（秒）
+    pool_recycle=3600     # 连接回收时间（秒）
 )
 
-# 创建数据库会话
+# 创建本地会话类
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 创建 Base 类
+# 声明基类
 Base = declarative_base()
 
-# 创建连接池
-pool = QueuePool(creator=engine.connect, pool_size=20, max_overflow=10)
-
-# 获取数据库会话
-def get_db():
-    db = SessionLocal()
+# 测试数据库连接（可选）
+if __name__ == "__main__":
     try:
-        yield db
-    finally:
-        db.close()
+        with engine.connect() as connection:
+            print("MySQL 连接成功！")
+    except Exception as e:
+        print(f"MySQL 连接失败: {e}")

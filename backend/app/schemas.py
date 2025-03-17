@@ -1,41 +1,44 @@
 from pydantic import BaseModel
+from datetime import datetime
 
-# 用户注册请求模型
-class UserCreate(BaseModel):
-    username: str
-    password: str
+# Token 响应模型
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
-# 用户登录请求模型
-class UserLogin(BaseModel):
+# Token 数据模型
+class TokenData(BaseModel):
+    username: str | None = None
+
+# 用户基础模型
+class UserBase(BaseModel):
     username: str
+
+# 用户创建模型
+class UserCreate(UserBase):
     password: str
 
 # 用户响应模型
-class User(BaseModel):
+class User(UserBase):
     id: int
-    username: str
-    is_admin: bool
+    is_admin: bool = False
 
     class Config:
-        from_attributes = True  # 允许从 ORM 模型转换为 Pydantic 模型
+        from_attributes = True  # 替换 orm_mode = True
 
-# 聊天请求模型
-class ChatRequest(BaseModel):
-    message: str
-    session_id: str | None = None
+# 消息基础模型
+class MessageBase(BaseModel):
+    content: str
 
-# 聊天响应模型
-class ChatResponse(BaseModel):
-    reply: str
-    session_id: str
-    history: list
+# 消息创建模型
+class MessageCreate(MessageBase):
+    sender_id: int
+    receiver_id: int
 
-# 修改密码请求模型
-class ChangePasswordRequest(BaseModel):
-    old_password: str
-    new_password: str
+# 消息响应模型
+class Message(MessageBase):
+    id: int
+    timestamp: datetime
 
-# 用户设置请求模型
-class SettingsRequest(BaseModel):
-    username: str | None = None
-    password: str | None = None
+    class Config:
+        from_attributes = True  # 替换 orm_mode = True
